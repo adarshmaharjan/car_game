@@ -1,167 +1,157 @@
 /* eslint-disable no-param-reassign */
-// DOM
-
-const score = document.querySelector('.score')
-const startBtn = document.querySelector('.start-btn')
-const gameArea = document.querySelector('.game-area')
-
-// document.addEventListener('keyup', keyUp)
-
-// Global variable
-
-const keys = {
-  ArrowUp: false,
-  ArrowDown: false,
-  ArrowLeft: false,
-  ArrowRight: false,
-}
-
-const player = {
-  gameState: false,
-  velocity: 5,
-  score: 0,
-}
-// function
-
-const keyDown = (e) => {
-  e.preventDefault()
-  keys[e.key] = true
-  // console.log(player.y)
-  // console.log(keys)
-}
-
-const keyUp = (e) => {
-  e.preventDefault()
-  keys[e.key] = false
-  // console.log(keys)
-}
-
-// collison detection
-
-const isCollided = (a, b) => {
-  const rect1 = a.getBoundingClientRect()
-  const rect2 = b.getBoundingClientRect()
-  if (
-    rect1.x < rect2.x + rect2.width &&
-    rect1.x + rect1.width > rect2.x &&
-    rect1.y < rect2.y + rect2.height &&
-    rect1.height + rect1.y > rect2.y
-  ) {
-    // collision detected!
-    return true
-  }
-  // no collision
-  return false
-}
-
-// move lines
-const moveLine = () => {
-  const lines = document.querySelectorAll('.road-line')
-  lines.forEach((line) => {
-    line.y += player.velocity
-    line.style.top = `${line.y}px`
-    if (line.y > gameArea.offsetHeight) {
-      line.y = -150
+class CarGame {
+  constructor(parentElement) {
+    this.keys = {
+      ArrowUp: false,
+      ArrowDown: false,
+      ArrowLeft: false,
+      ArrowRight: false,
     }
-  })
-}
-
-const gameOver = () => {
-  player.gameState = false
-}
-//  move enemy cars
-const moveEnemy = (car) => {
-  const enemyCars = document.querySelectorAll('.enemy-car')
-
-  enemyCars.forEach((item) => {
-    if (item.y > gameArea.offsetHeight) {
-      item.y = -300
-      item.style.left = `${Math.floor(Math.random() * 350)}px`
+    this.player = {
+      x: 0,
+      y: 0,
+      gameState: false,
+      velocity: 5,
+      score: 0,
     }
+    this.parentElement = parentElement
+    this.startBtn = this.parentElement.querySelector('.start-btn')
+    this.gameArea = this.parentElement.querySelector('.game-area')
+    this.score = this.parentElement.querySelector('.score')
+  }
 
-    if (isCollided(car, item)) {
-      gameOver()
+  // methods
+
+  moveLine() {
+    const lines = this.gameArea.querySelectorAll('.road-line')
+    lines.forEach((line) => {
+      line.y += this.player.velocity
+      line.style.top = `${line.y}px`
+      if (line.y > this.gameArea.offsetHeight) {
+        line.y = -150
+      }
+    })
+  }
+
+  gameOver = () => {
+    this.player.gameState = false
+  }
+
+  moveEnemy(car) {
+    const enemyCars = this.gameArea.querySelectorAll('.enemy-car')
+
+    enemyCars.forEach((item) => {
+      if (item.y > this.gameArea.offsetHeight) {
+        item.y = -300
+        item.style.left = `${Math.floor(Math.random() * 350)}px`
+      }
+
+      // eslint-disable-next-line no-undef
+      if (isCollided(car, item)) {
+        this.gameOver()
+      }
+
+      item.y += this.player.velocity
+      item.style.top = `${item.y}px`
+    })
+  }
+
+  handleKeys(car, road) {
+    if (this.keys.ArrowUp && this.player.y > road.top + 100)
+      this.player.y -= this.player.velocity
+    if (this.keys.ArrowDown && this.player.y < road.bottom - 70)
+      this.player.y += this.player.velocity
+    if (this.keys.ArrowLeft && this.player.x > 0)
+      this.player.x -= this.player.velocity
+    if (this.keys.ArrowRight && this.player.x < road.width - 50)
+      this.player.x += this.player.velocity
+
+    car.style.top = `${this.player.y}px`
+    car.style.left = `${this.player.x}px`
+  }
+
+  playGame() {
+    // car element after its creation
+    const car = this.gameArea.querySelector('.car')
+    const road = this.gameArea.getBoundingClientRect()
+    // console.log(road)
+
+    if (this.player.gameState === true) {
+      this.moveLine()
+      this.moveEnemy(car)
+      this.handleKeys(car, road)
+      this.player.score += 1
+      this.score.textContent = `Score:${this.player.score}`
+      window.requestAnimationFrame(this.playGame.bind(this))
     }
+  }
 
-    item.y += player.velocity
-    item.style.top = `${item.y}px`
-  })
-}
+  createCar() {
+    // create car
+    const car = document.createElement('div')
+    car.setAttribute('class', 'car')
+    this.gameArea.appendChild(car)
+    this.player.gameState = true
+    window.requestAnimationFrame(this.playGame.bind(this))
 
-// handle keys
-const handleKeys = (car, road) => {
-  if (keys.ArrowUp && player.y > road.top + 100) player.y -= player.velocity
-  if (keys.ArrowDown && player.y < road.bottom - 70) player.y += player.velocity
-  if (keys.ArrowLeft && player.x > 0) player.x -= player.velocity
-  if (keys.ArrowRight && player.x < road.width - 50) player.x += player.velocity
+    this.player.x = car.offsetLeft
+    this.player.y = car.offsetTop
+  }
 
-  car.style.top = `${player.y}px`
-  car.style.left = `${player.x}px`
-}
-const playGame = () => {
-  // car element after its creation
-  const car = document.querySelector('.car')
-  const road = gameArea.getBoundingClientRect()
-  // console.log(road)
+  createLines() {
+    // create lines
+    for (let i = 0; i < 5; i += 1) {
+      const roadLine = document.createElement('div')
+      roadLine.setAttribute('class', 'road-line')
+      roadLine.y = i * 150
+      roadLine.style.top = `${roadLine.y}px`
+      // console.log(roadLine.y)
+      this.gameArea.appendChild(roadLine)
+    }
+  }
 
-  if (player.gameState === true) {
-    moveLine()
-    moveEnemy(car)
-    handleKeys(car, road)
-    player.score += 1
-    score.textContent = `Score:${player.score}`
-    window.requestAnimationFrame(playGame)
+  createObstacle = () => {
+    // create enemy cars
+    for (let i = 0; i < 3; i += 1) {
+      const enemyCar = document.createElement('div')
+      enemyCar.y = (i + 1) * 350 * -1
+      enemyCar.style.top = `${enemyCar.y}px`
+      enemyCar.style.backgroundColor = 'blue'
+      enemyCar.setAttribute('class', 'enemy-car')
+      enemyCar.style.left = `${Math.floor(Math.random() * 350)}px`
+      this.gameArea.appendChild(enemyCar)
+    }
+  }
+
+  eventHandler() {
+    document.addEventListener('keydown', (e) => {
+      this.keys[e.key] = true
+      // console.log(this.keys)
+    })
+
+    document.addEventListener('keyup', (e) => {
+      this.keys[e.key] = false
+      // console.log(this.keys)
+    })
+
+    this.startBtn.addEventListener('click', this.start)
+  }
+
+  start() {
+    this.startBtn.classList.add('hide')
+    this.gameArea.classList.remove('hide')
+    this.score.classList.remove('hide')
+    this.player.gameState = true
+    this.createCar()
+    this.eventHandler()
+    this.createLines()
+    this.createObstacle()
+  }
+
+  init() {
+    this.start()
+    return this
   }
 }
-const createCar = () => {
-  // create car
-  const car = document.createElement('div')
-  car.setAttribute('class', 'car')
-  gameArea.appendChild(car)
-  player.gameState = true
-  window.requestAnimationFrame(playGame)
-
-  player.x = car.offsetLeft
-  player.y = car.offsetTop
-}
-const createLines = () => {
-  // create lines
-  for (let i = 0; i < 5; i += 1) {
-    const roadLine = document.createElement('div')
-    roadLine.setAttribute('class', 'road-line')
-    roadLine.y = i * 150
-    roadLine.style.top = `${roadLine.y}px`
-    // console.log(roadLine.y)
-    gameArea.appendChild(roadLine)
-  }
-}
-const createobstacle = () => {
-  // create enemy cars
-  for (let i = 0; i < 3; i += 1) {
-    const enemyCar = document.createElement('div')
-    enemyCar.y = (i + 1) * 350 * -1
-    enemyCar.style.top = `${enemyCar.y}px`
-    enemyCar.style.backgroundColor = 'blue'
-    enemyCar.setAttribute('class', 'enemy-car')
-    enemyCar.style.left = `${Math.floor(Math.random() * 350)}px`
-    gameArea.appendChild(enemyCar)
-  }
-}
-const start = () => {
-  startBtn.classList.add('hide')
-  gameArea.classList.remove('hide')
-  score.classList.remove('hide')
-  createCar()
-  createLines()
-  createobstacle()
-}
-
-// events
-
-document.addEventListener('keydown', keyDown)
-
-document.addEventListener('keyup', keyUp)
-
-startBtn.addEventListener('click', start)
-
-// execution
+const carGameElem = document.querySelector('.car-game')
+new CarGame(carGameElem).init()
